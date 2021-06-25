@@ -9,20 +9,12 @@ export let Config = {
   },
   // 上报地址
   reportUrl: 'http://localhost:10000',
-  // 脚本延迟上报时间
-  outtime: 300,
   // 开启单页面？
   enableSPA: true,
   // 是否上报行为
   isBehavior: true,
-  // 行为类型
-  behavior: {
-    console: ['log', 'error'], // 取值可以是"debug", "info", "warn", "log", "error"
-    click: true,
-  },
   // 最长上报数据长度
   maxLength: 50,
-  method: 'ajax'
 }
 
 // 设置参数

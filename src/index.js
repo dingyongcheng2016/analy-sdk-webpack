@@ -1,9 +1,10 @@
-import { Config, setConfig } from './config'
+import { Config, setConfig, } from './config'
 import { handleHealth, handleHashchange, handleHistorystatechange, 
   handleClick, setPage, listenMessageListener, handleListenLoad, initSessionId, initLongSessionId} from './handlers'
 import {on,off, parseUrl} from './utils/tools'
-import { hackState, hackConsole, } from './hack'
-import { setGlobalPage, GlobalVal, } from './config/global'
+import { hackState } from './hack'
+import { setGlobalPage, GlobalVal, setGlobalPageStartAt} from './config/global'
+import Timing from  './utils/timing.min'
 
 
 export default class Analysis {
@@ -16,10 +17,10 @@ export default class Analysis {
     console.log('options', options)
     // 初始化一些基本信息
     this.initData()
+
     // 更新配置
     setConfig(options)
-    // 更新pageStartAt
-    setGlobalPageStartAt(pageStartAt)
+    
     // 更新页面信息
     // 判断单页面
     const page = Config.enableSPA ? location.pathname.toLowerCase() + location.hash.toLowerCase() : location.pathname.toLowerCase()
@@ -47,9 +48,14 @@ export default class Analysis {
 
   // 初始化一部分数据
   initData(){
+    // Timing.getTimes().fetchStart
+    // 页面首次开始加载的时间点,浏览环境下卸载前一个文档结束之时的 Unix毫秒时间戳
+    // 更新pageStartAt
+    setGlobalPageStartAt(Timing ? Timing.getTimes().fetchStart : Date.now())
     initSessionId()
     initLongSessionId()
   }
+
   // 监听load
   addListenLoad() {
     on('load', handleListenLoad);
@@ -57,8 +63,8 @@ export default class Analysis {
 
   // 监听行为
   addListenBehavior() {
-    hackConsole()
-    Config.behavior.click && this.addListenClick()
+  
+    Config.isBehavior && this.addListenClick()
   }
 
   // 监听click

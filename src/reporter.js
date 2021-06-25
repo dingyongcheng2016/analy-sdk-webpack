@@ -1,24 +1,42 @@
 
 import { Config, } from './config'
-import { queryString, serialize, warn } from './utils/tools'
-
+import { serialize, warn } from './utils/tools'
+import { setCache, getCache } from './utils/customizeStorage'
+import { getInitPageInfos, getInitPages, updatePageInfos } from './utils/index'
 // 上报
-export function report(e, type, cb) {
-    "behavior" === type ? post(e, cb) 
-      : "health" === type && window && window.navigator && "function" == typeof window.navigator.sendBeacon ? sendBeacon(e, cb) 
-      : get(e, cb);
-  return this
+export function report(type="behavior") {
+  // 上报数据
+  const tempPages = getCache('pages') || getInitPages()
+  // 发送条件、数据截取、发送方式
+  if(tempPages.length > Config.maxLength || "health" === type){
+    const tempPageInfos = getCache('pageInfos') || getInitPageInfos()
+    const sendAt = Date.now()
+    const currentPages = tempPages.splice(-1, 1)
+    tempPageInfos.pages = tempPages
+    tempPageInfos.sendAt = sendAt
+    updatePageInfos('sendAt', sendAt)
+    const cb = function(){
+      // 保存当前页面信息的数据，下次发送
+      setCache('pages', currentPages)  
+    }
+    "behavior" === type ? post(tempPageInfos, cb) 
+      : window && window.navigator && "function" == typeof window.navigator.sendBeacon ? sendBeacon(tempPageInfos, cb) 
+      : get(tempPageInfos, cb);
+
+    
+  }
+    
 }
 
 // post上报
 export function post(body, cb) {
-  var XMLHttpRequest = window.__oXMLHttpRequest_ || window.XMLHttpRequest;
+  const XMLHttpRequest = window.__oXMLHttpRequest_ || window.XMLHttpRequest;
   if (typeof XMLHttpRequest === 'function') {
     try {
-      var xhr = new XMLHttpRequest();
+      const xhr = new XMLHttpRequest();
       xhr.onreadystatechange=function()
       {
-          if (xmlhttp.readyState==4 && xmlhttp.status==200){
+          if (xhr.readyState==4 && xhr.status==200){
               "function" == typeof cb && cb()
               console.log('上报成功！timestamp', Date.now())
           }
@@ -48,7 +66,7 @@ export function get(data, cb) {
 export function sendBeacon(data, cb) {
   
   window && window.navigator && "function" == typeof window.navigator.sendBeacon 
-    ? window.navigator.sendBeacon(Config.reportUrl, data) && "function" == typeof cb && cb()
+    ? window.navigator.sendBeacon(Config.reportUrl, JSON.stringify(data)) && "function" == typeof cb && cb()
     : warn("[arms] navigator.sendBeacon not surported") 
 }
 

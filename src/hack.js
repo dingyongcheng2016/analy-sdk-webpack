@@ -1,32 +1,6 @@
 import { parseUrl, fnToString, warn, dispatchCustomEvent, on, parseHash } from './utils/tools'
-import { handleBehavior, setPage, } from './handlers'
+import { setPage, } from './handlers'
 import { Config } from './config'
-
-// hack console
-// "debug", "info", "warn", "log", "error"
-export function hackConsole() {
-  if (window && window.console) {
-    for (var e = Config.behavior.console, n = 0; e.length; n++) {
-      var r = e[n];
-      var action = window.console[r]
-      if (!window.console[r]) return;
-        (function (r, action) {
-          window.console[r] = function() {
-            var i = Array.prototype.slice.apply(arguments)
-            var s = {
-              type: "console",
-              data: {
-                level: r,
-                message: JSON.stringify(i),
-              }
-            };
-            handleBehavior(s)
-            action && action.apply(null, i)
-          }
-        })(r, action)
-    }
-  }
-}
 
 /**
  * hack pushstate replaceState

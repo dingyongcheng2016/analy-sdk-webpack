@@ -5,18 +5,7 @@ import { setCache, getCache, getStringCache, removeCache, setSessionStorage, get
 import Cookies from 'js-cookie'
 import Timing from  './timing.min'
 
-// 页面首次点击标志
-let isNewPage = false
 
-// 页面初次加载到事件发生的间隔
-let pageFromLoadIntervalSecond = 0
-
-// 页面首次开始加载的时间点,浏览环境下卸载前一个文档结束之时的 Unix毫秒时间戳
-let pageStartAt =   Timing ? Timing.getTimes().fetchStart : Date.now()
-
-
-// 更新pageStartAt
-setGlobalPageStartAt(pageStartAt)
 
 
 export function getcommonData() {
@@ -87,7 +76,7 @@ export function getEnvInfo(){
 
 
 // 获取会话信息，每次获取防止失效，可以优化
-function getSessionInfo(){
+export function getSessionInfo(){
   const sessionId = getSessionStorage('tkSessionId') || Cookies.get('tkSessionId')
   const longSessionId = getStringCache('longSessionId') || Cookies.get('longSessionId')
   const token = getStringCache('accessToken') || getStringCache('token') || Cookies.get('accessToken') || Cookies.get('token') || ''
@@ -139,7 +128,7 @@ export function getPerformanceInfo(){
 }
 
 // 获取页面信息
-function getPageInfo(event, visitAt, pageFromLoadIntervalSecond ){
+export function getPageInfo(event, visitAt, pageFromLoadIntervalSecond ){
     
   const dataset = Object.keys(event.target.dataset || {})
   console.log('dataset', dataset)
@@ -226,9 +215,11 @@ function getPageInfo(event, visitAt, pageFromLoadIntervalSecond ){
 }
 
 // 封装数据
-function deal(sessionInfo, pageInfo, performanceInfo){
+export function deal(pageInfo){
   const pageInfos = getCache('pageInfos') || getInitPageInfos()
   const pages = getCache('pages') || getInitPages()
+  const sessionInfo = getSessionInfo()
+  const performanceInfo = getPerformanceInfo()
   // 更新pages
   const tempPageInfos = {
       ...getInitPageInfos(),
@@ -248,79 +239,6 @@ function deal(sessionInfo, pageInfo, performanceInfo){
   setCache('pages', pages)
 }
 
-
- // 上报数据
- function send(){
-  const tempPages = getCache('pages') || getInitPages()
-  // 发送条件、数据截取、发送方式
-  if(tempPages.length > Config.maxLength){
-      const tempPageInfos = getCache('pageInfos')
-      const sendAt = Date.now()
-      const currentPages = tempPages.splice(-1, 1)
-      tempPageInfos.pages = tempPages
-      tempPageInfos.sendAt = sendAt
-      updatePageInfos('sendAt', sendAt)
-
-      const type = Config.method.toLowerCase()
-      if(type === 'imgae'){
-          new Image().src = `/${Config.reportUrl}?pageInfos=${JSON.stringify(tempPageInfos)}` // get
-      }else if(type === 'ajax'){
-          const xmlhttp = new XMLHttpRequest();
-          xmlhttp.onreadystatechange=function()
-          {
-              if (xmlhttp.readyState==4 && xmlhttp.status==200){
-                  console.log('上报成功！timestamp', Date.now())
-              }
-          }
-          xmlhttp.open("post", Config.reportUrl); // get
-          // 设置header的默认值
-          xmlhttp.setRequestHeader('Content-Type', 'application/json;charset=UTF-8');
-          xmlhttp.send(JSON.stringify(tempPageInfos));
-      }else{
-          navigator.sendBeacon(Config.reportUrl, JSON.stringify(tempPageInfos)); // post
-      }
-      // 保存当前页面信息的数据，下次发送
-      setCache('pages', currentPages)    
-  }
-}
-
-// 数据采集、发送
-export function tracker(event, timeStamp=Date.now()){
-    
-  // 每次触发的时间、每次访问的时间
-  const visitAt = timeStamp
-  const currentPageObj = getCurrentPage() 
-  // 当前页面
-  const pagePath = location.pathname + location.hash 
-  if(currentPageObj && currentPageObj.pagePath != pagePath ){
-      // 页面首次加载
-      isNewPage = true
-      // 新页面重置为零
-      pageFromLoadIntervalSecond = 0
-      // 上次的页面停留时长
-      const currentVisitCostSecond = visitAt - GlobalVal.pageStartAt
-      // 更新页面开始时间
-      setGlobalPageStartAt(visitAt)
-      updatePages('pageVisitCostSecond', currentVisitCostSecond / 1000)
-  }
-  if(currentPageObj && currentPageObj.pageVisitAt){
-      // 页面操作动作的时间间隔
-      const currentEventIntervalSecond = visitAt - currentPageObj.pageVisitAt
-      updatePages('pageEventIntervalSecond', currentEventIntervalSecond / 1000)
-  }
-  if(isNewPage && event.type === 'click'){
-      isNewPage = false
-      pageFromLoadIntervalSecond = visitAt - currentPageObj.pageVisitAt
-      updatePages('pageFromLoadIntervalSecond', pageFromLoadIntervalSecond / 1000)
-  }
-  // 存储数据前进行判断发送
-  send()
-  const sessionInfo = getSessionInfo()
-  const pageInfo = getPageInfo(event, visitAt, pageFromLoadIntervalSecond / 1000)
-  const performanceInfo = getPerformanceInfo()
-  // 封装数据 保存
-  deal(sessionInfo, pageInfo, performanceInfo)
-}
 
 // 获取当前记录
 export function getCurrentPage(){
@@ -376,7 +294,7 @@ function normalTarget (e) {
 }
 
 // 获取元素路径，最多保留5层
-function getElmPath (e) {
+export function getElmPath (e) {
   if (!e || 1 !== e.nodeType) return "";
   var ret = [],
       deepLength = 0, // 层数，最多5层

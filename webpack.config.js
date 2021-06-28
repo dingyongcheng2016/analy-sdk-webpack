@@ -35,7 +35,7 @@ module.exports = {
               "@babel/plugin-proposal-throw-expressions",
               ["@babel/plugin-proposal-class-properties", { loose: false }],
             ],
-            presets: ["@babel/preset-env", "@babel/preset-react"],
+            presets: ["@babel/preset-env"],
           },
         },
       },
